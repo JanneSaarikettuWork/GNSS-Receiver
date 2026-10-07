@@ -3,6 +3,9 @@
 A modern, high-precision Android application built with Jetpack Compose that tracks real-time location coordinates, estimates positioning accuracy, inspects multi-constellation GNSS satellite signals (GPS, Galileo, GLONASS, BeiDou), renders skyplots, and provides live NMEA Dilution of Precision (DOP) diagnostics.
 
 ---
+![](https://github.com/JanneSaarikettuWork/GNSS-Receiver/blob/main/GNSS-main.png "Main view")
+![](https://github.com/JanneSaarikettuWork/GNSS-Receiver/blob/main/GNSS-settings.png "Settings view")
+
 
 ## 🌟 Key Features
 
