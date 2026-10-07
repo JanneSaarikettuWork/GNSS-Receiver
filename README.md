@@ -85,7 +85,7 @@ Select and isolate positioning data from various satellite navigation systems an
 
 1. **Clone the Repository**:
    ```bash
-   git clone https://github.com/your-username/GNSSreceiver.git
+   git clone https://github.com/JanneSaarikettuWork/GNSSreceiver.git
    cd GNSSreceiver
    ```
 
