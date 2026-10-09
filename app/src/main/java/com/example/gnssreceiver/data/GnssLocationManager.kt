@@ -1,13 +1,16 @@
 package com.example.gnssreceiver.data
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.pm.PackageManager
 import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.location.OnNmeaMessageListener
 import android.os.Looper
+import androidx.core.content.ContextCompat
 import com.example.gnssreceiver.model.FixStatus
 import com.example.gnssreceiver.model.GnssDataState
 import com.example.gnssreceiver.model.GnssSatelliteInfo
@@ -31,18 +34,34 @@ class GnssLocationManager(private val context: Context) {
         LocationServices.getFusedLocationProviderClient(context)
     private val settingsRepository = SettingsRepository(context)
 
+    private val initialHasPermission = checkPermission()
+    private val initialIsGpsEnabled = isLocationEnabled()
+
     private val _state = MutableStateFlow(
         GnssDataState(
             selectedSource = settingsRepository.getDefaultSource(),
             enabledSources = settingsRepository.getEnabledSources(),
             updateIntervalMs = settingsRepository.getUpdateIntervalMs(),
             keepScreenOn = settingsRepository.getKeepScreenOn(),
-            useDmsFormatByDefault = settingsRepository.getUseDmsFormat()
+            useDmsFormatByDefault = settingsRepository.getUseDmsFormat(),
+            hasPermission = initialHasPermission,
+            isLocationEnabled = initialIsGpsEnabled,
+            fixStatus = when {
+                !initialHasPermission -> FixStatus.PERMISSION_REQUIRED
+                !initialIsGpsEnabled -> FixStatus.LOCATION_DISABLED
+                else -> FixStatus.SEARCHING
+            }
         )
     )
     val state: StateFlow<GnssDataState> = _state.asStateFlow()
 
     private var isTracking = false
+
+    init {
+        if (initialHasPermission && initialIsGpsEnabled) {
+            startTracking(hasPermission = true)
+        }
+    }
 
     private val locationListener = LocationListener { location ->
         handleNewLocation(location)
@@ -108,6 +127,18 @@ class GnssLocationManager(private val context: Context) {
         }
     }
 
+    fun checkPermission(): Boolean {
+        val fineGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        return fineGranted || coarseGranted
+    }
+
     fun setLocationSource(source: LocationSource) {
         if (_state.value.selectedSource == source && isTracking) return
 
@@ -157,7 +188,7 @@ class GnssLocationManager(private val context: Context) {
     }
 
     @SuppressLint("MissingPermission")
-    fun startTracking(hasPermission: Boolean) {
+    fun startTracking(hasPermission: Boolean = checkPermission()) {
         val isGpsEnabled = isLocationEnabled()
 
         _state.update {

@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +47,9 @@ fun PermissionGate(
 ) {
     val context = LocalContext.current
 
+    val initialPermissionGranted = remember { checkLocationPermission(context) }
+    val isPermissionGranted = hasPermission || initialPermissionGranted
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -55,19 +59,12 @@ fun PermissionGate(
     }
 
     LaunchedEffect(Unit) {
-        val fineGranted = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        val coarseGranted = ContextCompat.checkSelfPermission(
-            context, Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
-        onPermissionResult(fineGranted || coarseGranted)
+        val granted = checkLocationPermission(context)
+        onPermissionResult(granted)
     }
 
     when {
-        !hasPermission -> {
+        !isPermissionGranted -> {
             Card(
                 modifier = modifier
                     .fillMaxWidth()
