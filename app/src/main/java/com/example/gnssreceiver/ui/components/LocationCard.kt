@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.LocationOn
@@ -16,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +50,7 @@ fun LocationCard(
 ) {
     var useDmsFormat by remember(state.useDmsFormatByDefault) { mutableStateOf(state.useDmsFormatByDefault) }
     val location = state.currentLocation
+    val isSingleSource = state.enabledSources.size == 1
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -86,21 +89,63 @@ fun LocationCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             if (location == null) {
-                // Fix status message when no fix is available
-                val (statusText, statusColor) = when (state.fixStatus) {
-                    FixStatus.PERMISSION_REQUIRED -> "Location permission required" to MaterialTheme.colorScheme.error
-                    FixStatus.LOCATION_DISABLED -> "GPS / Location services disabled" to MaterialTheme.colorScheme.error
-                    FixStatus.SEARCHING -> "Acquiring satellite fix..." to MaterialTheme.colorScheme.primary
-                    FixStatus.FIX_ACQUIRED -> "Acquiring coordinates..." to MaterialTheme.colorScheme.secondary
-                }
+                // Fix status message when no fix is available yet
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        if (state.fixStatus == FixStatus.SEARCHING || state.fixStatus == FixStatus.FIX_ACQUIRED) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.5.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
 
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = statusColor,
-                    modifier = Modifier.padding(vertical = 12.dp)
-                )
+                        val statusText = when (state.fixStatus) {
+                            FixStatus.PERMISSION_REQUIRED -> "Location permission required"
+                            FixStatus.LOCATION_DISABLED -> "GPS / Location services disabled"
+                            else -> if (isSingleSource) {
+                                "Waiting for fix for ${state.selectedSource.displayName}..."
+                            } else {
+                                "Waiting for fix..."
+                            }
+                        }
+
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (state.fixStatus == FixStatus.PERMISSION_REQUIRED || state.fixStatus == FixStatus.LOCATION_DISABLED) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
+                        )
+                    }
+
+                    if (state.fixStatus == FixStatus.SEARCHING || state.fixStatus == FixStatus.FIX_ACQUIRED) {
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        val trackingText = if (isSingleSource) {
+                            "Tracking ${state.satellitesInView} ${state.selectedSource.shortName} satellites (${state.satellitesUsedInFix} used in fix)"
+                        } else {
+                            "Tracking ${state.totalSatellitesInView} satellites (${state.totalSatellitesUsedInFix} used in fix)"
+                        }
+
+                        Text(
+                            text = trackingText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else {
                 // Coordinates display
                 val formattedCoordinates = if (useDmsFormat) {

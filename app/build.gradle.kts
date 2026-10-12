@@ -4,6 +4,14 @@ plugins {
 }
 
 android {
+
+    // Define semantic versioning components
+    // TODO: MAINTAIN/UPDATE THESE
+    val versionMajor = 1
+    val versionMinor = 1
+    val versionPatch = 0
+    val versionBuild = 0 // Incremented via CI/CD if needed
+
     namespace = "com.example.gnssreceiver"
     compileSdk {
         version = release(37)
@@ -13,8 +21,17 @@ android {
         applicationId = "com.example.gnssreceiver"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+
+
+//        versionCode = 1
+//        versionName = "1.0"
+
+        // E.g. "1.2.3"
+        versionName = "$versionMajor.$versionMinor.$versionPatch"
+
+        // E.g.: 1020300
+        versionCode = (versionMajor * 1000000) + (versionMinor * 10000) + (versionPatch * 100) + versionBuild
+
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

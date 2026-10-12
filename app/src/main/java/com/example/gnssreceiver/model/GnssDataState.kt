@@ -25,6 +25,15 @@ data class GnssDataState(
     val isDualFrequencyActive: Boolean = false,
     val isHardwareGnssSupported: Boolean = true
 ) {
+    val fixAgeSeconds: Long
+        get() {
+            if (lastFixTimestamp <= 0L) return 0L
+            return ((System.currentTimeMillis() - lastFixTimestamp) / 1000L).coerceAtLeast(0L)
+        }
+
+    val isFixStale: Boolean
+        get() = currentLocation != null && fixAgeSeconds > 15L
+
     val filteredSatellites: List<GnssSatelliteInfo>
         get() {
             val constType = selectedSource.constellationType ?: return satellites

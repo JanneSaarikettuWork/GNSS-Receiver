@@ -9,6 +9,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.location.OnNmeaMessageListener
+import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.example.gnssreceiver.model.FixStatus
@@ -33,6 +34,24 @@ class GnssLocationManager(private val context: Context) {
     private val fusedLocationClient: FusedLocationProviderClient =
         LocationServices.getFusedLocationProviderClient(context)
     private val settingsRepository = SettingsRepository(context)
+
+    private val handler = Handler(Looper.getMainLooper())
+    private val staleCheckRunnable = object : Runnable {
+        override fun run() {
+            val currentState = _state.value
+            if (currentState.currentLocation != null && currentState.isFixStale) {
+                _state.update {
+                    it.copy(
+                        currentLocation = null,
+                        fixStatus = FixStatus.SEARCHING
+                    )
+                }
+            }
+            if (isTracking) {
+                handler.postDelayed(this, 3000L)
+            }
+        }
+    }
 
     private val initialHasPermission = checkPermission()
     private val initialIsGpsEnabled = isLocationEnabled()
@@ -143,7 +162,13 @@ class GnssLocationManager(private val context: Context) {
         if (_state.value.selectedSource == source && isTracking) return
 
         settingsRepository.setDefaultSource(source)
-        _state.update { it.copy(selectedSource = source) }
+        _state.update {
+            it.copy(
+                selectedSource = source,
+                currentLocation = null,
+                fixStatus = if (it.hasPermission && it.isLocationEnabled) FixStatus.SEARCHING else it.fixStatus
+            )
+        }
         if (isTracking) {
             restartLocationUpdates()
         }
@@ -214,11 +239,14 @@ class GnssLocationManager(private val context: Context) {
             locationManager.addNmeaListener(context.mainExecutor, nmeaListener)
 
             val lastGpsLoc = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            if (lastGpsLoc != null && _state.value.currentLocation == null) {
+            if (lastGpsLoc != null && (System.currentTimeMillis() - lastGpsLoc.time) < 15_000L && _state.value.currentLocation == null) {
                 handleNewLocation(lastGpsLoc)
             }
 
             requestSourceUpdates(_state.value.selectedSource)
+
+            handler.removeCallbacks(staleCheckRunnable)
+            handler.postDelayed(staleCheckRunnable, 3000L)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -262,6 +290,7 @@ class GnssLocationManager(private val context: Context) {
 
     fun stopTracking() {
         isTracking = false
+        handler.removeCallbacks(staleCheckRunnable)
         try {
             locationManager.removeUpdates(locationListener)
             fusedLocationClient.removeLocationUpdates(fusedLocationCallback)

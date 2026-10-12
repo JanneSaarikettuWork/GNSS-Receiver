@@ -26,6 +26,7 @@ fun SourceSelector(
     modifier: Modifier = Modifier
 ) {
     val visibleSources = LocationSource.entries.filter { it in enabledSources }
+    val isSingleSource = enabledSources.size == 1
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -67,8 +68,14 @@ fun SourceSelector(
                 }
             }
 
+            val descriptionText = if (isSingleSource) {
+                selectedSource.description
+            } else {
+                "(several sources)"
+            }
+
             Text(
-                text = selectedSource.description,
+                text = descriptionText,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)

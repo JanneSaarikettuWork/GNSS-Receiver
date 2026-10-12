@@ -49,7 +49,23 @@ fun SatelliteListCard(
     modifier: Modifier = Modifier
 ) {
     var isExpanded by remember { mutableStateOf(true) }
+    val isSingleSource = state.enabledSources.size == 1
     val satellites = state.filteredSatellites.sortedByDescending { it.cn0DbHz }
+
+    val headerTitle = if (isSingleSource) {
+        "SATELLITE SIGNALS (${state.selectedSource.shortName})"
+    } else {
+        "SATELLITE SIGNALS"
+    }
+
+    val emptyMessage = if (isSingleSource) {
+        "No satellites visible for ${state.selectedSource.displayName}"
+    } else {
+        "No satellites visible"
+    }
+
+    val usedCount = if (isSingleSource) state.satellitesUsedInFix else state.totalSatellitesUsedInFix
+    val visibleCount = if (isSingleSource) state.satellitesInView else state.totalSatellitesInView
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -67,7 +83,7 @@ fun SatelliteListCard(
             ) {
                 Column {
                     Text(
-                        text = "SATELLITE SIGNALS (${state.selectedSource.shortName})",
+                        text = headerTitle,
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -75,8 +91,8 @@ fun SatelliteListCard(
                     Text(
                         text = "Avg C/N0: %.1f dB-Hz • Used: %d / %d".format(
                             state.averageCn0DbHz,
-                            state.satellitesUsedInFix,
-                            state.satellitesInView
+                            usedCount,
+                            visibleCount
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -97,7 +113,7 @@ fun SatelliteListCard(
 
                     if (satellites.isEmpty()) {
                         Text(
-                            text = "No satellites visible for ${state.selectedSource.displayName}",
+                            text = emptyMessage,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.outline,
                             modifier = Modifier.padding(vertical = 12.dp)
